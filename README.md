@@ -29,6 +29,7 @@ ChessPilot is an independent project. Its optional AI vision and coaching featur
 
 - Edit a position interactively or load a FEN. Chess.js validates position state and legal moves.
 - Analyze with Stockfish 19 Lite in a Web Worker using WebAssembly. The UI can show up to five candidate lines and their evaluations.
+- Install ChessPilot as a progressive web app. A service worker caches the application shell and same-origin engine, recognition, and runtime files as they are used, so local analysis can keep working offline after an initial online visit.
 - Share a permitted training screen. Fenshot and ONNX Runtime Web attempt local board recognition; stable board observations update the position and start analysis automatically.
 - Detect board orientation and square colors from the shared board image.
 - Configure separate Top Billing/OpenAI-compatible vision and coaching providers. Vision is an opt-in fallback when local recognition cannot produce a sufficiently reliable position. The coach can explain an engine line or suggest a legal candidate if Stockfish fails.
@@ -56,6 +57,8 @@ git clone https://github.com/SanthoshkumarSampathkumar/chesspilot.git && cd ches
 ```
 
 Open the local URL printed by Vite. Screen capture requires a secure context (`localhost` or HTTPS) and explicit browser source selection. The Stockfish engine, matching WASM file, and chess recognition model are included in this repository; no separate model or engine download is needed. `npm ci` does need network access on first setup to fetch pinned JavaScript dependencies. After installation, the core board, recognition, and Stockfish workflow does not call an AI service.
+
+For offline use, open the app once while connected and let the engine/model finish loading. If you want screen recognition offline, start one recognition session online so the ONNX runtime can be cached too. On supported browsers, use **Install ChessPilot** from the browser’s install or app menu. The app shows its cache and connection state in the top bar. Provider-based AI still requires a network connection.
 
 ### Optional Top Billing AI models
 
@@ -99,6 +102,7 @@ The detailed component, sequence, privacy, and deployment notes are in [docs/ARC
 ## Privacy model
 
 - Screen capture begins only after the user selects a source. Frames are sampled and analyzed in the active browser session.
+- The service worker caches only same-origin static application assets and the app shell. It does not cache provider requests, and browser storage eviction can remove offline assets.
 - Local recognition, board-state checks, and Stockfish analysis run client-side.
 - A configured vision provider receives a sampled frame only when vision fallback runs. A configured coach provider receives position data when a coach explanation or engine-failure fallback runs.
 - Provider settings are encrypted with Web Crypto AES-GCM and saved to IndexedDB for this browser profile. This protects stored bytes at rest from casual inspection; it is not a server-side secrets vault and does not protect against malicious same-origin JavaScript or an already compromised browser profile.

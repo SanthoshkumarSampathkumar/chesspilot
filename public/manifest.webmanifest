@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "ChessPilot — Training Studio",
+  "short_name": "ChessPilot",
+  "description": "A local-first chess analysis and training workspace.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1018",
+  "theme_color": "#0a1018",
+  "categories": ["education", "games", "utilities"],
+  "icons": [
+    {
+      "src": "./chesspilot-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

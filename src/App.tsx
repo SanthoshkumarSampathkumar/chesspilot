@@ -206,6 +206,8 @@ function formatEvaluation(cp: number, mate: number | null = null): string {
 }
 
 function App() {
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
+  const [offlineReady, setOfflineReady] = useState(() => typeof navigator !== 'undefined' && Boolean(navigator.serviceWorker?.controller))
   const [fen, setFen] = useState(INITIAL_FEN)
   const [fenDraft, setFenDraft] = useState(INITIAL_FEN)
   const [fenOpen, setFenOpen] = useState(false)
@@ -269,6 +271,20 @@ function App() {
   const previewRef = useRef<HTMLVideoElement>(null)
   const captureStreamRef = useRef<MediaStream | null>(null)
   const captureMutedRef = useRef(false)
+
+  useEffect(() => {
+    const updateOnline = () => setIsOnline(navigator.onLine)
+    const markOfflineReady = () => setOfflineReady(Boolean(navigator.serviceWorker?.controller))
+    window.addEventListener('online', updateOnline)
+    window.addEventListener('offline', updateOnline)
+    navigator.serviceWorker?.addEventListener('controllerchange', markOfflineReady)
+    markOfflineReady()
+    return () => {
+      window.removeEventListener('online', updateOnline)
+      window.removeEventListener('offline', updateOnline)
+      navigator.serviceWorker?.removeEventListener('controllerchange', markOfflineReady)
+    }
+  }, [])
 
   currentFenRef.current = fen
   detectedTurnRef.current = detectedTurn
@@ -1066,6 +1082,7 @@ function App() {
         <header className="topbar">
           <div className="breadcrumbs"><span>Workspace</span><ChevronRight size={14} /><b>{activeNav === 'settings' ? 'Privacy & settings' : activeNav === 'history' ? 'Analysis history' : 'Overview'}</b></div>
           <div className="topbar-right">
+            <span className={`offline-pill ${isOnline ? offlineReady ? '' : 'preparing' : 'offline'}`} title={isOnline ? offlineReady ? 'The app shell, engine, board model, and files you have opened are cached for offline use.' : 'Offline support is being prepared. Visit once while online to cache the app.' : 'You are offline. AI provider requests require an internet connection.'}><span className="status-dot" />{isOnline ? offlineReady ? 'OFFLINE READY' : 'PREPARING OFFLINE' : 'OFFLINE MODE'}</span>
             <span className="engine-pill"><span className={workerReady ? 'status-dot' : 'status-dot warming'} /> {workerReady ? 'Stockfish ready' : 'Stockfish loading'}</span>
             <button className="icon-button" aria-label="Settings" title="Settings" onClick={() => setActiveNav('settings')}><Settings2 size={17} /></button>
             <div className="top-avatar">S</div>
@@ -1076,6 +1093,7 @@ function App() {
           <section className="settings-page content-wrap">
             <div className="page-heading"><div><div className="eyebrow">YOUR CONTROLS</div><h1>Privacy & settings</h1><p>Choose what ChessPilot can access and how your analysis works.</p></div><ShieldCheck size={28} className="heading-icon" /></div>
     <div className="settings-grid">
+              <div className="settings-card"><div className="settings-card-head"><Activity size={18} /><h2>Offline workspace</h2></div><p>Install ChessPilot from your browser’s app menu. Open once while online so the engine, recognition model, and app assets are cached. AI provider requests still need a connection.</p><div className="settings-row"><span>Connection</span><span className="setting-value">{isOnline ? 'Online' : 'Offline'}</span></div><div className="settings-row"><span>Offline app shell</span><span className="setting-value">{offlineReady ? 'Ready' : 'Preparing'}</span></div></div>
               <div className="settings-card"><div className="settings-card-head"><Monitor size={18} /><h2>Screen sharing</h2></div><p>Screen frames and board recognition run in this browser. ChessPilot does not upload them.</p><div className="settings-row"><span>Capture status</span><span className="setting-value">{captureState === 'active' ? (captureMuted ? 'Source paused' : 'Sharing') : captureState === 'error' ? 'Stopped by source' : 'Stopped'}</span></div><div className="settings-row"><span>Board recognition</span><span className="setting-value">Local CNN model</span></div></div>
               <div className="settings-card"><div className="settings-card-head"><Cpu size={18} /><h2>Local analysis</h2></div><p>Stockfish Lite runs in a single-threaded WebAssembly worker. Positions and engine results stay in this browser session.</p><div className="settings-row"><span>Search budget</span><span className="setting-value">900 ms per position</span></div><div className="settings-row"><span>Engine status</span><span className="setting-value">{workerReady ? 'Ready' : 'Loading'}</span></div></div>
               <div className="settings-card provider-card"><div className="settings-card-head"><Eye size={18} /><h2>Vision model fallback</h2></div><p>Used only when local board recognition misses or returns an uncertain position. A shared frame is sent to this provider when fallback runs. Enter a Top Billing API key and image-capable model ID. <a href="https://topbilling.in/models" target="_blank" rel="noreferrer">Browse models</a> · <a href="https://topbilling.in/docs" target="_blank" rel="noreferrer">API docs</a>.</p><label>OpenAI-compatible endpoint<input value={visionSettings.endpoint} onChange={(event) => { setVisionSettings({ ...visionSettings, endpoint: event.target.value }); setVisionSaved(false) }} placeholder="https://api.topbilling.in/v1/chat/completions" /></label><label>Vision model<input value={visionSettings.model} onChange={(event) => { setVisionSettings({ ...visionSettings, model: event.target.value }); setVisionSaved(false) }} placeholder="Top Billing model ID" /></label><label>API key<input type="password" autoComplete="new-password" value={visionSettings.apiKey} onChange={(event) => { setVisionSettings({ ...visionSettings, apiKey: event.target.value }); setVisionSaved(false) }} placeholder="Top Billing API key" /></label><div className="provider-save-row"><button className="secondary-button" onClick={() => void saveProviderSettings('vision', visionSettings)}>Save vision settings</button><span>{visionSaved ? 'Encrypted and saved' : 'Unsaved changes'}</span></div></div>

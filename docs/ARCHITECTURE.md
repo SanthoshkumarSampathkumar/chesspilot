@@ -18,6 +18,7 @@ flowchart TB
     ENGINE[Stockfish 19 Lite worker + WASM]
     VAULT[IndexedDB encrypted provider settings]
     PIP[Document Picture-in-Picture coach]
+    SW[Scoped service worker and static asset cache]
   end
   subgraph EXTERNAL[Optional, user-configured endpoints]
     VISION[Vision chat-completion endpoint]
@@ -37,6 +38,7 @@ flowchart TB
   COACH -. legal move candidate or explanation .-> STATE
   VIEW <--> VAULT
   VIEW --> PIP
+  SW -. shell and same-origin static files .-> VIEW
 ```
 
 The dotted edges cross the browser boundary and represent optional outbound provider requests. The vision endpoint receives a JPEG image derived from a sampled frame. The coach endpoint receives a FEN, legal move candidates, and/or an engine line depending on the request. No provider call is made without complete settings for that provider.
@@ -57,6 +59,7 @@ The dotted edges cross the browser boundary and represent optional outbound prov
 | Provider settings | Web Crypto + IndexedDB in `src/App.tsx` | Uses a non-extractable AES-GCM key stored in IndexedDB, random 96-bit IV per saved provider record, and encrypted provider settings. Decryption occurs in the app when settings load. This is local browser storage, not protection against same-origin script execution. |
 | Floating coach | Document Picture-in-Picture API | Opens a separate same-origin document window where supported by the browser. Analysis state remains in the app; the floating surface follows the current position and analysis. |
 | Static delivery | Vite + GitHub Pages Actions | Builds static `dist/` artifacts. No runtime API keys or server-side environment variables are required to serve the app. Optional provider credentials are entered by the user in browser settings. |
+| Offline shell | `public/sw.js`, web app manifest | The service worker is scoped to the deployment base path, precaches the app shell, uses network-first navigation with an offline shell fallback, and cache-first for same-origin engine, model, and bundled app assets. It does not intercept cross-origin provider traffic. |
 
 ## Screen-to-analysis sequence
 
@@ -142,6 +145,7 @@ Saved provider settings are encrypted with AES-GCM in IndexedDB using a non-extr
 - **Root-mounted static host:** `npm run build`; serve `dist/` at `/` over HTTPS.
 - **GitHub Pages:** `npm run build:pages`; Vite sets the `/chesspilot/` project path. `.github/workflows/pages.yml` uploads `dist/` and deploys it with the Pages artifact flow.
 - **Screen capture:** requires browser support for `getDisplayMedia`, a secure context, and explicit user source selection.
+- **Install and offline:** the web app manifest enables installation where supported. On first load, the service worker caches the shell, main application bundles, Stockfish, and board model. The larger ONNX inference WASM is cached when recognition is first used. Visit online and allow each required feature to load before relying on it offline. AI provider requests remain online-only. Browser storage eviction can remove cached files.
 - **Floating panel:** requires Document Picture-in-Picture support; other browsers keep the regular dashboard coach.
 - **WASM assets:** the engine worker must be same-origin reachable at the configured base path. The ONNX Runtime Web WASM files are emitted from the installed package during the Vite build.
 
@@ -161,6 +165,7 @@ GitHub Pages serves these static files without custom response headers. If a bro
 When changing the runtime, update the related contract and diagrams here. In particular, keep these aligned:
 
 - asset filenames and Vite base path (`vite.config.ts`, README, Pages workflow)
+- service worker cache version and offline precache assumptions (`public/sw.js`)
 - Stockfish JS/WASM version pairing and notices
 - recognition model URL and its license notice
 - provider request payloads and the data leaving the browser
