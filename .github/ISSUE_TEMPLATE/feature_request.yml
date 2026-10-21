@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose an improvement to ChessPilot
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Explain the user need and current limitation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the desired flow or outcome.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Relevant constraints
+      options:
+        - label: This should work without an AI provider configured.
+        - label: This should keep screen frames and board state local by default.
+        - label: This may require an optional external provider or service.

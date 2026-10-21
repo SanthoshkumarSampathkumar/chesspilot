@@ -7,6 +7,12 @@
 <p align="center"><strong>A private, browser-based chess training and analysis workspace.</strong></p>
 
 <p align="center">
+  <a href="https://github.com/SanthoshkumarSampathkumar/chesspilot/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/SanthoshkumarSampathkumar/chesspilot/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/SanthoshkumarSampathkumar/chesspilot/actions/workflows/pages.yml"><img alt="GitHub Pages deployment" src="https://github.com/SanthoshkumarSampathkumar/chesspilot/actions/workflows/pages.yml/badge.svg?branch=main"></a>
+  <a href="LICENSE"><img alt="GPL-3.0-only" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg"></a>
+</p>
+
+<p align="center">
   <a href="https://santhoshkumarsampathkumar.github.io/chesspilot/">Live demo</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
@@ -16,6 +22,8 @@
 ChessPilot combines a legal chessboard, local Stockfish analysis, optional screen-based board recognition, and an optional AI coach in one client-side application. Screen frames and engine searches stay in the browser unless you explicitly configure an AI provider and its fallback is used.
 
 ChessPilot is an independent project. Its optional AI vision and coaching features can use models through the [Top Billing API gateway](https://topbilling.in/), which exposes an OpenAI-compatible chat endpoint. Top Billing is a service ChessPilot can connect to; it did not create or publish this repository.
+
+**Local-first by design:** board state, legal move validation, screen-frame recognition, and Stockfish analysis run in your browser. External AI calls are optional and require your provider settings. ChessPilot has no account system, analytics backend, or game-data server.
 
 ## Product capabilities
 
@@ -69,6 +77,8 @@ The production bundle expects the paired engine files under `/engine/` and the r
 
 ## Runtime at a glance
 
+ChessPilot separates the local analysis path from optional provider fallbacks:
+
 ```mermaid
 flowchart LR
   U[User] --> UI[React dashboard and floating coach]
@@ -106,12 +116,15 @@ The detailed component, sequence, privacy, and deployment notes are in [docs/ARC
 | `public/models/` | ONNX chessboard recognition model and model license |
 | `.github/workflows/` | Pull request CI and GitHub Pages deployment |
 | `docs/ARCHITECTURE.md` | System design, request flows, constraints, and operational details |
+| `.github/` | CI, Pages delivery, dependency updates, and contributor templates |
 
 ## Build and release
 
 GitHub Actions runs `npm test` and `npm run build` on pushes and pull requests to `main`. A separate workflow builds with the `/chesspilot/` base path and deploys the static `dist/` directory to GitHub Pages.
 
 For a root-mounted static host, use `npm run build`. For GitHub Pages, use `npm run build:pages`. The static host must serve the files in `dist/`; it does not need a backend service.
+
+Dependabot checks npm dependencies and GitHub Actions weekly. Pull requests run the test suite and production build before merge.
 
 ## Licensing
 
