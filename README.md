@@ -1,67 +1,101 @@
-# ChessPilot Web
+# ChessPilot
 
-ChessPilot is a browser based chess analysis and training workspace. It combines a legal interactive board, local Stockfish analysis, and optional screen based position recognition in one dashboard.
+<p align="center">
+  <img src="docs/assets/chesspilot-dashboard.png" alt="ChessPilot chess training dashboard" width="100%" />
+</p>
 
-## Features
+<p align="center"><strong>A private, browser-based chess training and analysis workspace.</strong></p>
 
-- Analyze positions locally with the bundled Stockfish 19 Lite single threaded WebAssembly engine.
-- Edit positions on the board, load FEN, undo moves, review the move list, and inspect engine lines.
-- Share a permitted training or analysis screen. The local `fenshot` model looks for the board, reads its pieces, estimates its orientation, and syncs stable positions to the dashboard.
-- Match the dashboard board colors to the detected board. Recognition and color sampling run in the browser.
-- Choose whether move recommendations should favor White or Black. A move for the side to move is selected from the engine lines; when the other side is chosen, the weakest candidate shown is offered as a blunder candidate. It may not be a forced blunder.
-- Configure optional OpenAI compatible vision and coaching providers in Settings. Vision fallback can send a shared frame to the selected provider; coaching can send a FEN and engine lines. Provider calls are off unless configured.
-- Open a floating coach board in browsers that support Document Picture-in-Picture.
+<p align="center">
+  <a href="https://santhoshkumarsampathkumar.github.io/chesspilot/">Live demo</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
 
-ChessPilot is intended for puzzles, bots, and analysis positions where assistance is allowed. Do not use it to gain an unfair advantage in a competitive game.
+ChessPilot combines a legal chessboard, local Stockfish analysis, optional screen-based board recognition, and an optional AI coach in one client-side application. Screen frames and engine searches stay in the browser unless you explicitly configure an AI provider and its fallback is used.
 
-## Requirements
+**Created by [TopBilling](https://topbilling.in/).**
 
-- Node.js 20 or newer and npm.
-- A modern browser. Screen capture and Document Picture-in-Picture support vary by browser and operating system.
+## Product capabilities
 
-## Run locally
+- Edit a position interactively or load a FEN. Chess.js validates position state and legal moves.
+- Analyze with Stockfish 19 Lite in a Web Worker using WebAssembly. The UI can show up to five candidate lines and their evaluations.
+- Share a permitted training screen. Fenshot and ONNX Runtime Web attempt local board recognition; stable board observations update the position and start analysis automatically.
+- Detect board orientation and square colors from the shared board image.
+- Configure separate OpenAI-compatible vision and coaching providers. Vision is an opt-in fallback when local recognition cannot produce a sufficiently reliable position. The coach can explain an engine line or suggest a legal candidate if Stockfish fails.
+- Open a floating coach panel in browsers that support Document Picture-in-Picture.
+- Choose which side should win to guide move recommendations. The choice affects candidate selection; it does not prove that a position is won or force an outcome.
+
+ChessPilot is for puzzles, bots, and analysis positions where assistance is allowed. Follow the rules of the environment you use.
+
+## Quick start
+
+Requirements: Node.js 20+ and npm.
 
 ```sh
+git clone https://github.com/SanthoshkumarSampathkumar/chesspilot.git
+cd chesspilot
 npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Screen capture works on `localhost` and on secure HTTPS origins. To build and preview a production bundle:
-
-```sh
-npm run build
-npm run preview
-```
-
-The app serves the recognition model from `/models/` and the matching Stockfish JavaScript and WebAssembly files from `/engine/`. Keep each engine file pair together when deploying.
-
-## Privacy
-
-- Screen frames and local board recognition stay in the browser by default.
-- If a vision provider is configured, frames can be sent to that endpoint when local recognition misses or is uncertain.
-- If a coach provider is configured, position FENs and analysis lines can be sent to that endpoint for explanations or move fallback.
-- Provider settings are encrypted with Web Crypto and stored in this browser profile's IndexedDB. This is local browser storage, not a server-side secrets vault; scripts running on the same origin can access the app's settings while the page is open.
-- Screen sharing starts only after the user selects a source. Stop sharing ends the capture.
-
-## Project structure
-
-- `src/App.tsx` — dashboard, screen capture, recognition synchronization, settings, and floating coach.
-- `src/analysis.ts` — UCI parsing, score perspective, and legal principal variation conversion.
-- `public/models/` — browser chess piece recognition model.
-- `public/engine/` — Stockfish worker, matching WASM binary, and its license.
-- `.github/workflows/` — continuous integration and GitHub Pages deployment.
-
-## Checks
+Open the local URL printed by Vite. Screen capture requires a secure context (`localhost` or HTTPS) and explicit browser source selection.
 
 ```sh
 npm test
 npm run build
+npm run preview
 ```
 
-The tests cover UCI parsing, White perspective score conversion, and legal principal variation conversion. Browser screen capture, engine startup, and recognition quality depend on the deployment browser and the shared board image.
+The production bundle expects the paired engine files under `/engine/` and the recognition model under `/models/`. Do not separate the Stockfish JavaScript worker from its matching WASM file.
 
-## Deployment
+## Runtime at a glance
 
-The `Deploy to GitHub Pages` workflow publishes the site from the `main` branch. It uses `npm run build:pages` to set the project site path. For another static host, run `npm run build` and serve `dist/` over HTTPS; the default build uses the root path.
+```mermaid
+flowchart LR
+  U[User] --> UI[React dashboard and floating coach]
+  UI --> POS[Chess.js position and legal-move validation]
+  POS --> SF[Stockfish Web Worker]
+  SF --> UI
+  UI --> CAP[Optional getDisplayMedia capture]
+  CAP --> REC[Fenshot + ONNX Runtime Web]
+  REC -->|stable placement| POS
+  REC -. uncertain or missing, if configured .-> V[Vision provider]
+  V -. board placement .-> POS
+  UI -. FEN and engine line, if configured .-> C[Coach provider]
+  SF -. startup, timeout, or no move .-> C
+```
 
-See [LICENSE](./LICENSE) and [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md) for license details.
+The detailed component, sequence, privacy, and deployment notes are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Privacy model
+
+- Screen capture begins only after the user selects a source. Frames are sampled and analyzed in the active browser session.
+- Local recognition, board-state checks, and Stockfish analysis run client-side.
+- A configured vision provider receives a sampled frame only when vision fallback runs. A configured coach provider receives position data when a coach explanation or engine-failure fallback runs.
+- Provider settings are encrypted with Web Crypto AES-GCM and saved to IndexedDB for this browser profile. This protects stored bytes at rest from casual inspection; it is not a server-side secrets vault and does not protect against malicious same-origin JavaScript or an already compromised browser profile.
+- Never commit provider keys, `.env` files, personal captures, or private game data.
+
+## Repository map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/App.tsx` | Dashboard, state coordination, screen capture, recognition loop, provider calls, floating coach, and Stockfish worker lifecycle |
+| `src/analysis.ts` | UCI info parsing, score normalization to White's perspective, and legal UCI-to-SAN variation conversion |
+| `src/analysis.test.ts` | Unit coverage for engine protocol parsing and chess-line conversion |
+| `src/style.css` | Responsive dashboard, board, capture, and floating coach styles |
+| `public/engine/` | Stockfish worker runtime, matching WebAssembly binary, and engine license |
+| `public/models/` | ONNX chessboard recognition model and model license |
+| `.github/workflows/` | Pull request CI and GitHub Pages deployment |
+| `docs/ARCHITECTURE.md` | System design, request flows, constraints, and operational details |
+
+## Build and release
+
+GitHub Actions runs `npm test` and `npm run build` on pushes and pull requests to `main`. A separate workflow builds with the `/chesspilot/` base path and deploys the static `dist/` directory to GitHub Pages.
+
+For a root-mounted static host, use `npm run build`. For GitHub Pages, use `npm run build:pages`. The static host must serve the files in `dist/`; it does not need a backend service.
+
+## Licensing
+
+ChessPilot is distributed under [GPL-3.0-only](LICENSE). Third-party engine and model notices, including upstream source links, are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Review those terms before redistributing a modified bundle.
