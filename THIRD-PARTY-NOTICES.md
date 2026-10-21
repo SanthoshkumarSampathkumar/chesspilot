@@ -1,6 +1,6 @@
 # Third-party notices
 
-ChessPilot Web includes or redistributes the following third-party software and assets. Their licenses remain applicable to those components.
+ChessPilot includes or redistributes the following third-party software and assets. Their licenses remain applicable to those components.
 
 ## Stockfish.js 19.0.1
 

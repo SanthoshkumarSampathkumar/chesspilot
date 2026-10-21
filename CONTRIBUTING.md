@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve ChessPilot Web.
+Thanks for helping improve ChessPilot.
 
 ## Development setup
 
