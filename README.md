@@ -15,7 +15,7 @@
 
 ChessPilot combines a legal chessboard, local Stockfish analysis, optional screen-based board recognition, and an optional AI coach in one client-side application. Screen frames and engine searches stay in the browser unless you explicitly configure an AI provider and its fallback is used.
 
-**Created by [TopBilling](https://topbilling.in/).**
+ChessPilot is an independent project. Its optional AI vision and coaching features can use models through the [Top Billing API gateway](https://topbilling.in/), which exposes an OpenAI-compatible chat endpoint. Top Billing is a service ChessPilot can connect to; it did not create or publish this repository.
 
 ## Product capabilities
 
@@ -23,7 +23,7 @@ ChessPilot combines a legal chessboard, local Stockfish analysis, optional scree
 - Analyze with Stockfish 19 Lite in a Web Worker using WebAssembly. The UI can show up to five candidate lines and their evaluations.
 - Share a permitted training screen. Fenshot and ONNX Runtime Web attempt local board recognition; stable board observations update the position and start analysis automatically.
 - Detect board orientation and square colors from the shared board image.
-- Configure separate OpenAI-compatible vision and coaching providers. Vision is an opt-in fallback when local recognition cannot produce a sufficiently reliable position. The coach can explain an engine line or suggest a legal candidate if Stockfish fails.
+- Configure separate Top Billing/OpenAI-compatible vision and coaching providers. Vision is an opt-in fallback when local recognition cannot produce a sufficiently reliable position. The coach can explain an engine line or suggest a legal candidate if Stockfish fails.
 - Open a floating coach panel in browsers that support Document Picture-in-Picture.
 - Choose which side should win to guide move recommendations. The choice affects candidate selection; it does not prove that a position is won or force an outcome.
 
@@ -31,16 +31,33 @@ ChessPilot is for puzzles, bots, and analysis positions where assistance is allo
 
 ## Quick start
 
-Requirements: Node.js 20+ and npm.
+To try ChessPilot without cloning or installing anything, open the [hosted demo](https://santhoshkumarsampathkumar.github.io/chesspilot/).
 
-```sh
-git clone https://github.com/SanthoshkumarSampathkumar/chesspilot.git
-cd chesspilot
-npm ci
-npm run dev
+To run from a clone, install Git, Node.js 20+, and npm. Paste the command for your shell. It clones the repo, installs JavaScript dependencies once, and starts the app:
+
+PowerShell:
+
+```powershell
+git clone https://github.com/SanthoshkumarSampathkumar/chesspilot.git; if ($?) { Set-Location chesspilot; npm ci; if ($?) { npm run dev } }
 ```
 
-Open the local URL printed by Vite. Screen capture requires a secure context (`localhost` or HTTPS) and explicit browser source selection.
+Bash / macOS / Linux:
+
+```sh
+git clone https://github.com/SanthoshkumarSampathkumar/chesspilot.git && cd chesspilot && npm ci && npm run dev
+```
+
+Open the local URL printed by Vite. Screen capture requires a secure context (`localhost` or HTTPS) and explicit browser source selection. The Stockfish engine, matching WASM file, and chess recognition model are included in this repository; no separate model or engine download is needed. `npm ci` does need network access on first setup to fetch pinned JavaScript dependencies. After installation, the core board, recognition, and Stockfish workflow does not call an AI service.
+
+### Optional Top Billing AI models
+
+AI is optional. To enable it, open **Privacy & settings** in ChessPilot and enter a Top Billing API key and model ID in the **AI coach provider** settings. The endpoint is prefilled as `https://api.topbilling.in/v1/chat/completions`. Save the settings, then analyze a position. The coach can explain Stockfish lines and provide a legal-move fallback if Stockfish fails.
+
+For screenshot-based AI recognition, configure the separate **Vision model fallback** with the same gateway endpoint, an image-capable model ID, and your key. This is only called when local recognition misses or returns an uncertain position. Model IDs and capabilities can change; choose an available model in [Top Billing Models](https://topbilling.in/models) and see the [Top Billing quickstart](https://topbilling.in/docs) for API keys.
+
+Requests go directly from your browser to the configured gateway. ChessPilot saves provider settings encrypted in this browser profile, but a browser application cannot keep an entered API key secret from code running on the same origin. Do not enter a production key on a shared or untrusted device. A public multi-user deployment should use a backend proxy with server-side secret storage.
+
+### Maintainer checks
 
 ```sh
 npm test

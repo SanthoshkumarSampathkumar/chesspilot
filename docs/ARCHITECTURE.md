@@ -1,6 +1,6 @@
 # ChessPilot architecture
 
-This document describes the application as implemented in the repository. ChessPilot is a static single-page application: there is no ChessPilot API server, database service, or server-side analysis process. The browser owns the application state and orchestrates local computation and optional provider requests.
+This document describes the application as implemented in the repository. ChessPilot is an independent static single-page application: there is no ChessPilot API server, database service, or server-side analysis process. The browser owns the application state and orchestrates local computation and optional provider requests. ChessPilot can use the [Top Billing API gateway](https://topbilling.in/) for optional model calls; Top Billing is a gateway service integration, not the creator or publisher of this project.
 
 ## System context
 
@@ -52,8 +52,8 @@ The dotted edges cross the browser boundary and represent optional outbound prov
 | Capture adapter | `navigator.mediaDevices.getDisplayMedia` in `src/App.tsx` | Explicit user selection starts a `MediaStream`. Track `ended`, `mute`, `unmute`, and stream `inactive` events keep UI status synchronized. Capture ends when the browser or selected source ends its track. |
 | Recognition pipeline | `@scoriiu/fenshot`, ONNX Runtime Web | Uses the local ONNX model from `public/models/`. Frames are sampled on a three-second interval; recognition work is serialized, local detections are confidence/plausibility checked, and the same placement must be stable across at least two observations before synchronizing. |
 | Board presentation | React state and CSS | Orientation is resolved from the detected placement. Square colors are sampled from the detected board area and applied to the local board. |
-| Vision fallback | OpenAI-compatible chat completion in `src/App.tsx` | Only runs when a vision endpoint, model, and key are configured and local recognition does not produce a reliable result. Provider output is parsed as piece placement and checked for valid rank structure and exactly one king per side; chess legality is separately checked by Chess.js. |
-| Coach and move fallback | OpenAI-compatible chat completion in `src/App.tsx` | Explains the Stockfish candidate when requested. If Stockfish is unavailable, times out, or returns no legal move, the fallback sends the position and legal moves; the returned move must match a legal SAN or UCI move before it is accepted. AI output is not engine-verified. |
+| Vision fallback | OpenAI-compatible chat completion in `src/App.tsx` | Defaults to Top Billing's `https://api.topbilling.in/v1/chat/completions` endpoint. Only runs when a vision endpoint, image-capable model ID, and key are configured and local recognition does not produce a reliable result. Provider output is parsed as piece placement and checked for valid rank structure and exactly one king per side; chess legality is separately checked by Chess.js. |
+| Coach and move fallback | OpenAI-compatible chat completion in `src/App.tsx` | Defaults to Top Billing's `https://api.topbilling.in/v1/chat/completions` endpoint. Explains the Stockfish candidate when requested. If Stockfish is unavailable, times out, or returns no legal move, the fallback sends the position and legal moves; the returned move must match a legal SAN or UCI move before it is accepted. AI output is not engine-verified. |
 | Provider settings | Web Crypto + IndexedDB in `src/App.tsx` | Uses a non-extractable AES-GCM key stored in IndexedDB, random 96-bit IV per saved provider record, and encrypted provider settings. Decryption occurs in the app when settings load. This is local browser storage, not protection against same-origin script execution. |
 | Floating coach | Document Picture-in-Picture API | Opens a separate same-origin document window where supported by the browser. Analysis state remains in the app; the floating surface follows the current position and analysis. |
 | Static delivery | Vite + GitHub Pages Actions | Builds static `dist/` artifacts. No runtime API keys or server-side environment variables are required to serve the app. Optional provider credentials are entered by the user in browser settings. |
@@ -130,15 +130,15 @@ Vision and coach providers are configured independently. Requests go directly fr
 - **Coach explanation:** the current FEN, engine candidate, principal variation, and evaluation.
 - **AI move fallback:** the current FEN, side to move, legal moves, and Stockfish failure context.
 
-The user-configured provider is responsible for its own request handling, logging, retention, and privacy controls. Browser CORS and provider compatibility also affect whether requests succeed.
+The user-configured provider is responsible for its own request handling, logging, retention, and privacy controls. The default Top Billing endpoint is OpenAI Chat Completions compatible; users provide their own API key and model ID. The gateway's model catalog lists current IDs and capabilities, including which models accept images. See [Top Billing docs](https://topbilling.in/docs) and [model catalog](https://topbilling.in/models). Browser CORS and provider compatibility also affect whether requests succeed.
 
 ### Credential storage
 
-Saved provider settings are encrypted with AES-GCM in IndexedDB using a non-extractable Web Crypto key stored in the same origin's IndexedDB. This reduces exposure from opening the stored record directly. Since application code on the same origin can retrieve and use the key, it is not a server-side vault and does not mitigate XSS, malicious extensions, malware, or a compromised browser profile. For a higher-assurance deployment, credentials should be brokered by an authenticated backend with its own access controls and secret storage.
+Saved provider settings are encrypted with AES-GCM in IndexedDB using a non-extractable Web Crypto key stored in the same origin's IndexedDB. This reduces exposure from opening the stored record directly. Since application code on the same origin can retrieve and use the key, it is not a server-side vault and does not mitigate XSS, malicious extensions, malware, or a compromised browser profile. The key is sent directly from the browser to the configured gateway. Do not use a production key on shared or untrusted devices. Top Billing's [security guidance](https://www.topbilling.in/docs/security) advises against embedding API keys in browser applications; a public multi-user deployment should broker calls through an authenticated backend with server-side secret storage.
 
 ## Deployment and browser requirements
 
-- **Local development:** `npm run dev`; Vite serves the app at localhost and sets COOP/COEP headers for local cross-origin isolation scenarios.
+- **Local development:** clone the repository, run `npm ci` once, then `npm run dev`; this downloads pinned JavaScript dependencies from npm. The Stockfish JavaScript/WASM pair and chess recognition model are checked into `public/`, so there is no separate engine or model-weight download. Vite serves the app at localhost and sets COOP/COEP headers for local cross-origin isolation scenarios.
 - **Root-mounted static host:** `npm run build`; serve `dist/` at `/` over HTTPS.
 - **GitHub Pages:** `npm run build:pages`; Vite sets the `/chesspilot/` project path. `.github/workflows/pages.yml` uploads `dist/` and deploys it with the Pages artifact flow.
 - **Screen capture:** requires browser support for `getDisplayMedia`, a secure context, and explicit user source selection.
