@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
